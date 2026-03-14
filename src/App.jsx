@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { seasonData } from './seasonData';
 
@@ -158,6 +158,77 @@ const SidebarStats = ({ stats, color }) => {
         })}
       </div>
     </div>
+  );
+};
+
+// Sound button component - plays Pokémon cry
+const SoundButton = ({ pokemonId }) => {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef(null);
+
+  const playCry = (e) => {
+    e.stopPropagation();
+    if (playing) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      setPlaying(false);
+      return;
+    }
+
+    const urls = [
+      `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${pokemonId}.ogg`,
+      `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/legacy/${pokemonId}.ogg`,
+    ];
+
+    const tryPlay = (index) => {
+      if (index >= urls.length) {
+        setPlaying(false);
+        return;
+      }
+      const audio = new Audio(urls[index]);
+      audioRef.current = audio;
+      audio.volume = 0.7;
+      audio.play()
+        .then(() => {
+          setPlaying(true);
+          audio.onended = () => setPlaying(false);
+        })
+        .catch(() => tryPlay(index + 1));
+    };
+
+    tryPlay(0);
+  };
+
+  return (
+    <button
+      className={`sound-btn ${playing ? 'sound-btn--playing' : ''}`}
+      onClick={playCry}
+      title={playing ? 'Stop cry' : 'Play Pokémon cry'}
+      aria-label={playing ? 'Stop Pokémon cry' : 'Play Pokémon cry'}
+    >
+      {playing ? (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/>
+          <line x1="15" y1="9" x2="21" y2="15"/>
+          <line x1="21" y1="9" x2="15" y2="15"/>
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        </svg>
+      )}
+      {playing && (
+        <span className="sound-waves">
+          <span/>
+          <span/>
+          <span/>
+        </span>
+      )}
+    </button>
   );
 };
 
@@ -626,7 +697,10 @@ function App() {
               <div className="modal-right">
                 <div className="modal-header-right">
                   <div>
-                    <h2>{selected.details.name.charAt(0).toUpperCase() + selected.details.name.slice(1)}</h2>
+                    <div className="pokemon-name-sound-row">
+                      <h2>{selected.details.name.charAt(0).toUpperCase() + selected.details.name.slice(1)}</h2>
+                      <SoundButton pokemonId={selected.details.id} />
+                    </div>
                     <div className="pokemon-number">#{String(selected.details.id).padStart(4, '0')}</div>
                   </div>
                 </div>
@@ -636,14 +710,7 @@ function App() {
                   <p className="flavor-text">{selected.flavor}</p>
                 )}
                 
-                {/* Versions */}
-                <div className="versions-section">
-                  <span className="versions-label">Versions:</span>
-                  <div className="versions-icons">
-                    <span className="version-ball" title="Generation 1">⭕</span>
-                    <span className="version-ball version-red" title="Red/FireRed">🔴</span>
-                  </div>
-                </div>
+
                 
                 {/* Info Box */}
                 <div className="info-box">
